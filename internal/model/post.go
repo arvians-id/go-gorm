@@ -12,3 +12,12 @@ type Post struct {
 	CreatedAt time.Time  `json:"created_at"`
 	UpdatedAt time.Time  `json:"updated_at"`
 }
+
+type PostResponse struct {
+	ID          uint      `json:"id"`
+	Title       string    `json:"title"`
+	Body        string    `json:"body"`
+	CommentBody string    `json:"comment_body"`
+	CreatedAt   time.Time `json:"created_at"`
+	UpdatedAt   time.Time `json:"updated_at"`
+}

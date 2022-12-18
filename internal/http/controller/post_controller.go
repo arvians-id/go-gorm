@@ -86,10 +86,18 @@ func (controller *PostController) FindById(w http.ResponseWriter, r *http.Reques
 	defer cancel()
 
 	id := chi.URLParam(r, "id")
-	var post model.Post
-	err := controller.DB.WithContext(ctx).Preload(clause.Associations, func(db *gorm.DB) *gorm.DB {
-		return db.Order("comments.created_at desc")
-	}).First(&post, id).Error
+	idPost, err := strconv.ParseInt(id, 10, 64)
+	if err != nil {
+		response.ReturnErrorBadRequest(w, err, nil)
+		return
+	}
+
+	var post model.PostResponse
+	err = controller.DB.WithContext(ctx).Model(&model.Post{}).
+		Select("posts.*, comments.body as comment_body").
+		Where("posts.id = ?", idPost).
+		Joins("Comments").
+		First(&post).Error
 	if err != nil {
 		response.ReturnErrorNotFound(w, err, nil)
 		return
