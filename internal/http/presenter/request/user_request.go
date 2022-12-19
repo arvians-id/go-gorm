@@ -1,8 +1,8 @@
 package request
 
 type ChangeRolesRequest struct {
-	UserID uint   `json:"user_id"`
-	RoleID []uint `json:"role_id"`
+	UserID uint64   `json:"user_id"`
+	RoleID []uint64 `json:"role_id"`
 }
 
 type PaginationData struct {

@@ -3,6 +3,8 @@ package server
 import (
 	"github.com/arvians-id/go-gorm/cmd/config"
 	"github.com/arvians-id/go-gorm/internal/http/controller"
+	"github.com/arvians-id/go-gorm/internal/repository"
+	"github.com/arvians-id/go-gorm/internal/service"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"gorm.io/gorm"
@@ -34,7 +36,11 @@ func NewInitializedServer(configuration config.Config) *chi.Mux {
 		w.Write([]byte("welcome"))
 	})
 
-	userController := controller.NewUserController(db)
+	userRepository := repository.NewUserRepository(db)
+
+	userService := service.NewUserService(userRepository)
+
+	userController := controller.NewUserController(userService)
 	postController := controller.NewPostController(db)
 	commentController := controller.NewCommentController(db)
 

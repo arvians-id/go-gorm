@@ -3,23 +3,24 @@ package controller
 import (
 	"context"
 	"encoding/json"
-	"github.com/arvians-id/go-gorm/internal/http/presenter/request"
-	"github.com/arvians-id/go-gorm/internal/http/presenter/response"
-	"github.com/arvians-id/go-gorm/internal/model"
-	"github.com/go-chi/chi/v5"
-	"gorm.io/gorm"
 	"net/http"
 	"strconv"
 	"time"
+
+	"github.com/arvians-id/go-gorm/internal/http/presenter/request"
+	"github.com/arvians-id/go-gorm/internal/http/presenter/response"
+	"github.com/arvians-id/go-gorm/internal/model"
+	"github.com/arvians-id/go-gorm/internal/service"
+	"github.com/go-chi/chi/v5"
 )
 
 type UserController struct {
-	DB *gorm.DB
+	UserService service.UserService
 }
 
-func NewUserController(db *gorm.DB) *UserController {
+func NewUserController(userService service.UserService) *UserController {
 	return &UserController{
-		DB: db,
+		UserService: userService,
 	}
 }
 
@@ -39,16 +40,7 @@ func (controller *UserController) List(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
 
-	var users []model.User
-	err := controller.DB.WithContext(ctx).
-		Table("user_roles").
-		Select("COUNT(*) as total,*").
-		Joins("LEFT JOIN roles r on r.id = user_roles.role_id").
-		Joins("LEFT JOIN users u on u.id = user_roles.user_id").
-		Group("u.id").
-		Order("total desc").
-		Preload("Roles").
-		Find(&users).Error
+	users, err := controller.UserService.List(ctx)
 	if err != nil {
 		response.ReturnErrorInternalServerError(w, err, nil)
 		return
@@ -62,76 +54,63 @@ func (controller *UserController) FindById(w http.ResponseWriter, r *http.Reques
 	defer cancel()
 
 	id := chi.URLParam(r, "id")
-	idUser, err := strconv.ParseInt(id, 10, 64)
+	idUser, err := strconv.ParseUint(id, 10, 64)
 	if err != nil {
 		response.ReturnErrorBadRequest(w, err, nil)
 		return
 	}
 
-	var userResponse model.User
-	err = controller.DB.WithContext(ctx).Model(&model.User{
-		ID: uint(idUser),
-	}).Preload("Roles").First(&userResponse).Error
-	if err != nil {
-		response.ReturnErrorNotFound(w, err, nil)
-		return
-	}
+	user, err := controller.UserService.FindById(ctx, idUser)
 
-	response.ReturnSuccessOK(w, "success", userResponse)
+	response.ReturnSuccessOK(w, "success", user)
 }
 
 func (controller *UserController) Create(w http.ResponseWriter, r *http.Request) {
-	var user model.User
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	defer cancel()
+
+	var user *model.User
 	err := json.NewDecoder(r.Body).Decode(&user)
 	if err != nil {
 		response.ReturnErrorBadRequest(w, err, nil)
 		return
 	}
 
-	err = controller.DB.Transaction(func(tx *gorm.DB) error {
-		ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
-		defer cancel()
+	userCreated, err := controller.UserService.Create(ctx, user)
+	if err != nil {
+		response.ReturnErrorInternalServerError(w, err, nil)
+		return
+	}
 
-		err = tx.WithContext(ctx).Create(&user).Association("Roles").Append(&model.Role{ID: 2, Role: "member"})
-		if err != nil {
-			return err
-		}
-		return nil
-	})
+	response.ReturnSuccessOK(w, "success", userCreated)
+}
+
+func (controller *UserController) Update(w http.ResponseWriter, r *http.Request) {
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	defer cancel()
+
+	var user *model.User
+	err := json.NewDecoder(r.Body).Decode(&user)
+	if err != nil {
+		response.ReturnErrorBadRequest(w, err, nil)
+		return
+	}
+
+	id := chi.URLParam(r, "id")
+	idUser, err := strconv.ParseUint(id, 10, 64)
+	if err != nil {
+		response.ReturnErrorBadRequest(w, err, nil)
+		return
+	}
+
+	user.ID = idUser
+	err = controller.UserService.Update(ctx, user)
 	if err != nil {
 		response.ReturnErrorInternalServerError(w, err, nil)
 		return
 	}
 
 	response.ReturnSuccessOK(w, "success", user)
-}
-
-func (controller *UserController) Update(w http.ResponseWriter, r *http.Request) {
-	var user model.User
-	err := json.NewDecoder(r.Body).Decode(&user)
-	if err != nil {
-		response.ReturnErrorBadRequest(w, err, nil)
-		return
-	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
-	defer cancel()
-
-	id := chi.URLParam(r, "id")
-	var userDB model.User
-	err = controller.DB.WithContext(ctx).Preload("Roles").First(&userDB, id).Error
-	if err != nil {
-		response.ReturnErrorNotFound(w, err, nil)
-		return
-	}
-
-	err = controller.DB.WithContext(ctx).Model(&userDB).Updates(&user).Error
-	if err != nil {
-		response.ReturnErrorInternalServerError(w, err, nil)
-		return
-	}
-
-	response.ReturnSuccessOK(w, "success", userDB)
 }
 
 func (controller *UserController) Delete(w http.ResponseWriter, r *http.Request) {
@@ -139,23 +118,25 @@ func (controller *UserController) Delete(w http.ResponseWriter, r *http.Request)
 	defer cancel()
 
 	id := chi.URLParam(r, "id")
-	var user model.User
-	err := controller.DB.WithContext(ctx).First(&user, id).Error
+	idUser, err := strconv.ParseUint(id, 10, 64)
 	if err != nil {
-		response.ReturnErrorNotFound(w, err, nil)
+		response.ReturnErrorBadRequest(w, err, nil)
 		return
 	}
 
-	err = controller.DB.WithContext(ctx).Delete(&user).Error
+	err = controller.UserService.Delete(ctx, idUser)
 	if err != nil {
 		response.ReturnErrorInternalServerError(w, err, nil)
 		return
 	}
 
-	response.ReturnSuccessOK(w, "success", user)
+	response.ReturnSuccessOK(w, "success", nil)
 }
 
 func (controller *UserController) ChangeRoles(w http.ResponseWriter, r *http.Request) {
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	defer cancel()
+
 	var userRequest request.ChangeRolesRequest
 	err := json.NewDecoder(r.Body).Decode(&userRequest)
 	if err != nil {
@@ -163,21 +144,16 @@ func (controller *UserController) ChangeRoles(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
-	defer cancel()
-
-	var roles []model.Role
+	var roles []*model.Role
 	for _, role := range userRequest.RoleID {
-		roles = append(roles, model.Role{ID: role})
+		roles = append(roles, &model.Role{ID: role})
 	}
 
-	err = controller.DB.WithContext(ctx).Model(&model.User{
-		ID: userRequest.UserID,
-	}).Association("Roles").Replace(roles)
+	err = controller.UserService.UpdateRoles(ctx, userRequest.UserID, roles)
 	if err != nil {
 		response.ReturnErrorInternalServerError(w, err, nil)
 		return
 	}
 
-	response.ReturnSuccessOK(w, "success", userRequest)
+	response.ReturnSuccessOK(w, "success", nil)
 }

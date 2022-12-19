@@ -5,7 +5,7 @@ import (
 )
 
 type Post struct {
-	ID        uint       `gorm:"primaryKey" json:"id"`
+	ID        uint64     `gorm:"primaryKey" json:"id"`
 	Title     string     `gorm:"type:varchar(255);not null" json:"title"`
 	Body      string     `gorm:"type:text;not null" json:"body"`
 	Comments  []*Comment `gorm:"foreignKey:PostID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;" json:"comments"`
@@ -14,7 +14,7 @@ type Post struct {
 }
 
 type PostResponse struct {
-	ID          uint      `json:"id"`
+	ID          uint64    `json:"id"`
 	Title       string    `json:"title"`
 	Body        string    `json:"body"`
 	CommentBody string    `json:"comment_body"`
