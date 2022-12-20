@@ -7,7 +7,7 @@ import (
 	"gorm.io/gorm/clause"
 )
 
-type PostRepository interface {
+type PostRepositoryContract interface {
 	List(ctx context.Context, perPage int, offset int) ([]*model.Post, error)
 	FindById(ctx context.Context, id uint64) (*model.PostResponse, error)
 	Create(ctx context.Context, post *model.Post) (*model.Post, error)
@@ -15,17 +15,17 @@ type PostRepository interface {
 	TotalRows(ctx context.Context) (int64, error)
 }
 
-type PostRepositoryImpl struct {
+type PostRepository struct {
 	DB *gorm.DB
 }
 
 func NewPostRepository(db *gorm.DB) PostRepository {
-	return &PostRepositoryImpl{
+	return PostRepository{
 		DB: db,
 	}
 }
 
-func (repository *PostRepositoryImpl) List(ctx context.Context, perPage int, offset int) ([]*model.Post, error) {
+func (repository *PostRepository) List(ctx context.Context, perPage int, offset int) ([]*model.Post, error) {
 	var posts []*model.Post
 	err := repository.DB.WithContext(ctx).Preload(clause.Associations, func(db *gorm.DB) *gorm.DB {
 		return db.Order("comments.created_at desc")
@@ -37,7 +37,7 @@ func (repository *PostRepositoryImpl) List(ctx context.Context, perPage int, off
 	return posts, nil
 }
 
-func (repository *PostRepositoryImpl) FindById(ctx context.Context, id uint64) (*model.PostResponse, error) {
+func (repository *PostRepository) FindById(ctx context.Context, id uint64) (*model.PostResponse, error) {
 	var post *model.PostResponse
 	err := repository.DB.WithContext(ctx).Model(&model.Post{}).
 		Select("posts.*, comments.body as comment_body").
@@ -51,7 +51,7 @@ func (repository *PostRepositoryImpl) FindById(ctx context.Context, id uint64) (
 	return post, nil
 }
 
-func (repository *PostRepositoryImpl) Create(ctx context.Context, post *model.Post) (*model.Post, error) {
+func (repository *PostRepository) Create(ctx context.Context, post *model.Post) (*model.Post, error) {
 	err := repository.DB.WithContext(ctx).Create(&post).Error
 	if err != nil {
 		return nil, err
@@ -60,7 +60,7 @@ func (repository *PostRepositoryImpl) Create(ctx context.Context, post *model.Po
 	return post, nil
 }
 
-func (repository *PostRepositoryImpl) Delete(ctx context.Context, id uint64) error {
+func (repository *PostRepository) Delete(ctx context.Context, id uint64) error {
 	_, err := repository.FindById(ctx, id)
 	if err != nil {
 		return err
@@ -75,7 +75,7 @@ func (repository *PostRepositoryImpl) Delete(ctx context.Context, id uint64) err
 	return nil
 }
 
-func (repository *PostRepositoryImpl) TotalRows(ctx context.Context) (int64, error) {
+func (repository *PostRepository) TotalRows(ctx context.Context) (int64, error) {
 	var totalRows int64
 	err := repository.DB.WithContext(ctx).Model(&model.Post{}).Count(&totalRows).Error
 	if err != nil {

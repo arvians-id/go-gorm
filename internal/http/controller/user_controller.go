@@ -18,13 +18,13 @@ type UserController struct {
 	UserService service.UserService
 }
 
-func NewUserController(userService service.UserService) *UserController {
-	return &UserController{
+func NewUserController(userService service.UserService) UserController {
+	return UserController{
 		UserService: userService,
 	}
 }
 
-func (controller *UserController) Route() http.Handler {
+func (controller *UserController) Routes() http.Handler {
 	route := chi.NewRouter()
 	route.Get("/", controller.List)
 	route.Get("/{id}", controller.FindById)

@@ -16,13 +16,13 @@ type CommentController struct {
 	CommentService service.CommentService
 }
 
-func NewCommentController(commentService service.CommentService) *CommentController {
-	return &CommentController{
+func NewCommentController(commentService service.CommentService) CommentController {
+	return CommentController{
 		CommentService: commentService,
 	}
 }
 
-func (controller *CommentController) Route() http.Handler {
+func (controller *CommentController) Routes() http.Handler {
 	route := chi.NewRouter()
 	route.Get("/", controller.List)
 	route.Post("/", controller.Create)

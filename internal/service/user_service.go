@@ -7,7 +7,7 @@ import (
 	"github.com/arvians-id/go-gorm/internal/repository"
 )
 
-type UserService interface {
+type UserServiceContract interface {
 	List(ctx context.Context) ([]*model.User, error)
 	FindById(ctx context.Context, id uint64) (*model.User, error)
 	Create(ctx context.Context, user *model.User) (*model.User, error)
@@ -16,36 +16,36 @@ type UserService interface {
 	UpdateRoles(ctx context.Context, userId uint64, roles []*model.Role) error
 }
 
-type UserServiceImpl struct {
+type UserService struct {
 	UserRepository repository.UserRepository
 }
 
 func NewUserService(userRepository repository.UserRepository) UserService {
-	return &UserServiceImpl{
+	return UserService{
 		UserRepository: userRepository,
 	}
 }
 
-func (service *UserServiceImpl) List(ctx context.Context) ([]*model.User, error) {
+func (service *UserService) List(ctx context.Context) ([]*model.User, error) {
 	return service.UserRepository.List(ctx)
 }
 
-func (service *UserServiceImpl) FindById(ctx context.Context, id uint64) (*model.User, error) {
+func (service *UserService) FindById(ctx context.Context, id uint64) (*model.User, error) {
 	return service.UserRepository.FindById(ctx, id)
 }
 
-func (service *UserServiceImpl) Create(ctx context.Context, user *model.User) (*model.User, error) {
+func (service *UserService) Create(ctx context.Context, user *model.User) (*model.User, error) {
 	return service.UserRepository.Create(ctx, user)
 }
 
-func (service *UserServiceImpl) Update(ctx context.Context, user *model.User) error {
+func (service *UserService) Update(ctx context.Context, user *model.User) error {
 	return service.UserRepository.Update(ctx, user)
 }
 
-func (service *UserServiceImpl) Delete(ctx context.Context, id uint64) error {
+func (service *UserService) Delete(ctx context.Context, id uint64) error {
 	return service.UserRepository.Delete(ctx, id)
 }
 
-func (service *UserServiceImpl) UpdateRoles(ctx context.Context, userId uint64, roles []*model.Role) error {
+func (service *UserService) UpdateRoles(ctx context.Context, userId uint64, roles []*model.Role) error {
 	return service.UserRepository.UpdateRoles(ctx, userId, roles)
 }

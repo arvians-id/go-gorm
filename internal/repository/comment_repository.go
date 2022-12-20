@@ -6,24 +6,24 @@ import (
 	"gorm.io/gorm"
 )
 
-type CommentRepository interface {
+type CommentRepositoryContract interface {
 	List(ctx context.Context) ([]*model.Comment, error)
 	FindById(ctx context.Context, id uint64) (*model.Comment, error)
 	Create(ctx context.Context, comment *model.Comment) (*model.Comment, error)
 	Delete(ctx context.Context, id uint64) error
 }
 
-type CommentRepositoryImpl struct {
+type CommentRepository struct {
 	DB *gorm.DB
 }
 
 func NewCommentRepository(db *gorm.DB) CommentRepository {
-	return &CommentRepositoryImpl{
+	return CommentRepository{
 		DB: db,
 	}
 }
 
-func (repository *CommentRepositoryImpl) List(ctx context.Context) ([]*model.Comment, error) {
+func (repository *CommentRepository) List(ctx context.Context) ([]*model.Comment, error) {
 	var comments []*model.Comment
 	err := repository.DB.WithContext(ctx).Find(&comments).Error
 	if err != nil {
@@ -33,7 +33,7 @@ func (repository *CommentRepositoryImpl) List(ctx context.Context) ([]*model.Com
 	return comments, nil
 }
 
-func (repository *CommentRepositoryImpl) FindById(ctx context.Context, id uint64) (*model.Comment, error) {
+func (repository *CommentRepository) FindById(ctx context.Context, id uint64) (*model.Comment, error) {
 	var comment *model.Comment
 	err := repository.DB.WithContext(ctx).First(&comment, id).Error
 	if err != nil {
@@ -43,7 +43,7 @@ func (repository *CommentRepositoryImpl) FindById(ctx context.Context, id uint64
 	return comment, nil
 }
 
-func (repository *CommentRepositoryImpl) Create(ctx context.Context, comment *model.Comment) (*model.Comment, error) {
+func (repository *CommentRepository) Create(ctx context.Context, comment *model.Comment) (*model.Comment, error) {
 	err := repository.DB.WithContext(ctx).Create(&comment).Error
 	if err != nil {
 		return nil, err
@@ -52,7 +52,7 @@ func (repository *CommentRepositoryImpl) Create(ctx context.Context, comment *mo
 	return comment, nil
 }
 
-func (repository *CommentRepositoryImpl) Delete(ctx context.Context, id uint64) error {
+func (repository *CommentRepository) Delete(ctx context.Context, id uint64) error {
 	comment, err := repository.FindById(ctx, id)
 	if err != nil {
 		return err

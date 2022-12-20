@@ -2,16 +2,20 @@ package main
 
 import (
 	"github.com/arvians-id/go-gorm/cmd/config"
-	"github.com/arvians-id/go-gorm/cmd/server"
+	"github.com/arvians-id/go-gorm/injection"
+	"log"
 	"net/http"
 )
 
 func main() {
 	configuration := config.New()
-	chiMux := server.NewInitializedServer(configuration)
-
-	err := http.ListenAndServe(":3000", chiMux)
+	routes, err := injection.InitServerAPI(configuration)
 	if err != nil {
-		panic("failed to start server")
+		log.Fatal(err)
+	}
+
+	err = http.ListenAndServe(":8080", routes)
+	if err != nil {
+		log.Fatal("failed to start server")
 	}
 }

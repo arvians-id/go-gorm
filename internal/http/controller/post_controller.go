@@ -18,13 +18,13 @@ type PostController struct {
 	PostService service.PostService
 }
 
-func NewPostController(postService service.PostService) *PostController {
-	return &PostController{
+func NewPostController(postService service.PostService) PostController {
+	return PostController{
 		PostService: postService,
 	}
 }
 
-func (controller *PostController) Route() http.Handler {
+func (controller *PostController) Routes() http.Handler {
 	route := chi.NewRouter()
 	route.Get("/", controller.List)
 	route.Get("/{id}", controller.FindById)

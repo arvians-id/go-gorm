@@ -7,7 +7,7 @@ import (
 	"github.com/arvians-id/go-gorm/internal/repository"
 )
 
-type PostService interface {
+type PostServiceContract interface {
 	List(ctx context.Context, perPage int, offset int) ([]*model.Post, error)
 	FindById(ctx context.Context, id uint64) (*model.PostResponse, error)
 	Create(ctx context.Context, post *model.Post) (*model.Post, error)
@@ -15,32 +15,32 @@ type PostService interface {
 	TotalRows(ctx context.Context) (int64, error)
 }
 
-type PostServiceImpl struct {
+type PostService struct {
 	PostRepository repository.PostRepository
 }
 
 func NewPostService(postRepository repository.PostRepository) PostService {
-	return &PostServiceImpl{
+	return PostService{
 		PostRepository: postRepository,
 	}
 }
 
-func (service *PostServiceImpl) List(ctx context.Context, perPage int, offset int) ([]*model.Post, error) {
+func (service *PostService) List(ctx context.Context, perPage int, offset int) ([]*model.Post, error) {
 	return service.PostRepository.List(ctx, perPage, offset)
 }
 
-func (service *PostServiceImpl) FindById(ctx context.Context, id uint64) (*model.PostResponse, error) {
+func (service *PostService) FindById(ctx context.Context, id uint64) (*model.PostResponse, error) {
 	return service.PostRepository.FindById(ctx, id)
 }
 
-func (service *PostServiceImpl) Create(ctx context.Context, post *model.Post) (*model.Post, error) {
+func (service *PostService) Create(ctx context.Context, post *model.Post) (*model.Post, error) {
 	return service.PostRepository.Create(ctx, post)
 }
 
-func (service *PostServiceImpl) Delete(ctx context.Context, id uint64) error {
+func (service *PostService) Delete(ctx context.Context, id uint64) error {
 	return service.PostRepository.Delete(ctx, id)
 }
 
-func (service *PostServiceImpl) TotalRows(ctx context.Context) (int64, error) {
+func (service *PostService) TotalRows(ctx context.Context) (int64, error) {
 	return service.PostRepository.TotalRows(ctx)
 }
