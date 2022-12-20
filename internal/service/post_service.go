@@ -1,0 +1,46 @@
+package service
+
+import (
+	"context"
+
+	"github.com/arvians-id/go-gorm/internal/model"
+	"github.com/arvians-id/go-gorm/internal/repository"
+)
+
+type PostService interface {
+	List(ctx context.Context, perPage int, offset int) ([]*model.Post, error)
+	FindById(ctx context.Context, id uint64) (*model.PostResponse, error)
+	Create(ctx context.Context, post *model.Post) (*model.Post, error)
+	Delete(ctx context.Context, id uint64) error
+	TotalRows(ctx context.Context) (int64, error)
+}
+
+type PostServiceImpl struct {
+	PostRepository repository.PostRepository
+}
+
+func NewPostService(postRepository repository.PostRepository) PostService {
+	return &PostServiceImpl{
+		PostRepository: postRepository,
+	}
+}
+
+func (service *PostServiceImpl) List(ctx context.Context, perPage int, offset int) ([]*model.Post, error) {
+	return service.PostRepository.List(ctx, perPage, offset)
+}
+
+func (service *PostServiceImpl) FindById(ctx context.Context, id uint64) (*model.PostResponse, error) {
+	return service.PostRepository.FindById(ctx, id)
+}
+
+func (service *PostServiceImpl) Create(ctx context.Context, post *model.Post) (*model.Post, error) {
+	return service.PostRepository.Create(ctx, post)
+}
+
+func (service *PostServiceImpl) Delete(ctx context.Context, id uint64) error {
+	return service.PostRepository.Delete(ctx, id)
+}
+
+func (service *PostServiceImpl) TotalRows(ctx context.Context) (int64, error) {
+	return service.PostRepository.TotalRows(ctx)
+}

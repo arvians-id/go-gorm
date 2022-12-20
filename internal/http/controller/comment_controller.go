@@ -5,19 +5,20 @@ import (
 	"encoding/json"
 	"github.com/arvians-id/go-gorm/internal/http/presenter/response"
 	"github.com/arvians-id/go-gorm/internal/model"
+	"github.com/arvians-id/go-gorm/internal/service"
 	"github.com/go-chi/chi/v5"
-	"gorm.io/gorm"
 	"net/http"
+	"strconv"
 	"time"
 )
 
 type CommentController struct {
-	DB *gorm.DB
+	CommentService service.CommentService
 }
 
-func NewCommentController(db *gorm.DB) *CommentController {
+func NewCommentController(commentService service.CommentService) *CommentController {
 	return &CommentController{
-		DB: db,
+		CommentService: commentService,
 	}
 }
 
@@ -35,8 +36,7 @@ func (controller *CommentController) List(w http.ResponseWriter, r *http.Request
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
 
-	var comments []model.Comment
-	err := controller.DB.WithContext(ctx).Find(&comments).Error
+	comments, err := controller.CommentService.List(ctx)
 	if err != nil {
 		response.ReturnErrorInternalServerError(w, err, nil)
 		return
@@ -50,8 +50,13 @@ func (controller *CommentController) FindById(w http.ResponseWriter, r *http.Req
 	defer cancel()
 
 	id := chi.URLParam(r, "id")
-	var comment model.Comment
-	err := controller.DB.WithContext(ctx).First(&comment, id).Error
+	idComment, err := strconv.ParseUint(id, 10, 64)
+	if err != nil {
+		response.ReturnErrorBadRequest(w, err, nil)
+		return
+	}
+
+	comment, err := controller.CommentService.FindById(ctx, idComment)
 	if err != nil {
 		response.ReturnErrorNotFound(w, err, nil)
 		return
@@ -61,8 +66,8 @@ func (controller *CommentController) FindById(w http.ResponseWriter, r *http.Req
 }
 
 func (controller *CommentController) Create(w http.ResponseWriter, r *http.Request) {
-	var comment model.Comment
-	err := json.NewDecoder(r.Body).Decode(&comment)
+	var commentRequest *model.Comment
+	err := json.NewDecoder(r.Body).Decode(&commentRequest)
 	if err != nil {
 		response.ReturnErrorBadRequest(w, err, nil)
 		return
@@ -71,7 +76,7 @@ func (controller *CommentController) Create(w http.ResponseWriter, r *http.Reque
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
 
-	err = controller.DB.WithContext(ctx).Create(&comment).Error
+	comment, err := controller.CommentService.Create(ctx, commentRequest)
 	if err != nil {
 		response.ReturnErrorInternalServerError(w, err, nil)
 		return
@@ -85,16 +90,15 @@ func (controller *CommentController) Delete(w http.ResponseWriter, r *http.Reque
 	defer cancel()
 
 	id := chi.URLParam(r, "id")
-	var comment model.Comment
-	err := controller.DB.WithContext(ctx).First(&comment, id).Error
+	idComment, err := strconv.ParseUint(id, 10, 64)
 	if err != nil {
-		response.ReturnErrorNotFound(w, err, nil)
+		response.ReturnErrorBadRequest(w, err, nil)
 		return
 	}
 
-	err = controller.DB.WithContext(ctx).Delete(&comment).Error
+	err = controller.CommentService.Delete(ctx, idComment)
 	if err != nil {
-		response.ReturnErrorInternalServerError(w, err, nil)
+		response.ReturnErrorNotFound(w, err, nil)
 		return
 	}
 

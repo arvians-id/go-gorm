@@ -37,12 +37,16 @@ func NewInitializedServer(configuration config.Config) *chi.Mux {
 	})
 
 	userRepository := repository.NewUserRepository(db)
+	postRepository := repository.NewPostRepository(db)
+	commentRepository := repository.NewCommentRepository(db)
 
 	userService := service.NewUserService(userRepository)
+	postService := service.NewPostService(postRepository)
+	commentService := service.NewCommentService(commentRepository)
 
 	userController := controller.NewUserController(userService)
-	postController := controller.NewPostController(db)
-	commentController := controller.NewCommentController(db)
+	postController := controller.NewPostController(postService)
+	commentController := controller.NewCommentController(commentService)
 
 	r.Route("/api", func(r chi.Router) {
 		r.Mount("/users", userController.Route())

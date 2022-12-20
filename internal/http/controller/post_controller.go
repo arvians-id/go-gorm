@@ -6,9 +6,8 @@ import (
 	"github.com/arvians-id/go-gorm/internal/http/presenter/request"
 	"github.com/arvians-id/go-gorm/internal/http/presenter/response"
 	"github.com/arvians-id/go-gorm/internal/model"
+	"github.com/arvians-id/go-gorm/internal/service"
 	"github.com/go-chi/chi/v5"
-	"gorm.io/gorm"
-	"gorm.io/gorm/clause"
 	"math"
 	"net/http"
 	"strconv"
@@ -16,12 +15,12 @@ import (
 )
 
 type PostController struct {
-	DB *gorm.DB
+	PostService service.PostService
 }
 
-func NewPostController(db *gorm.DB) *PostController {
+func NewPostController(postService service.PostService) *PostController {
 	return &PostController{
-		DB: db,
+		PostService: postService,
 	}
 }
 
@@ -40,12 +39,11 @@ func (controller *PostController) List(w http.ResponseWriter, r *http.Request) {
 	defer cancel()
 
 	var pagination request.PaginationData
-	queryPage := r.URL.Query().Get("page")
 	perPage := 3
 	pages := 1
 	var offset int
-	var totalRows int64
 
+	queryPage := r.URL.Query().Get("page")
 	if queryPage != "" {
 		page, err := strconv.ParseInt(queryPage, 10, 64)
 		if err != nil {
@@ -55,7 +53,7 @@ func (controller *PostController) List(w http.ResponseWriter, r *http.Request) {
 		pages = int(page)
 	}
 
-	err := controller.DB.WithContext(ctx).Model(&model.Post{}).Count(&totalRows).Error
+	totalRows, err := controller.PostService.TotalRows(ctx)
 	if err != nil {
 		response.ReturnErrorInternalServerError(w, err, nil)
 		return
@@ -69,10 +67,7 @@ func (controller *PostController) List(w http.ResponseWriter, r *http.Request) {
 
 	offset = (pages - 1) * perPage
 
-	var posts []model.Post
-	err = controller.DB.WithContext(ctx).Preload(clause.Associations, func(db *gorm.DB) *gorm.DB {
-		return db.Order("comments.created_at desc")
-	}).Order("posts.created_at desc").Limit(perPage).Offset(offset).Find(&posts).Error
+	posts, err := controller.PostService.List(ctx, perPage, offset)
 	if err != nil {
 		response.ReturnErrorInternalServerError(w, err, nil)
 		return
@@ -92,12 +87,7 @@ func (controller *PostController) FindById(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	var post model.PostResponse
-	err = controller.DB.WithContext(ctx).Model(&model.Post{}).
-		Select("posts.*, comments.body as comment_body").
-		Where("posts.id = ?", idPost).
-		Joins("Comments").
-		First(&post).Error
+	post, err := controller.PostService.FindById(ctx, uint64(idPost))
 	if err != nil {
 		response.ReturnErrorNotFound(w, err, nil)
 		return
@@ -107,8 +97,8 @@ func (controller *PostController) FindById(w http.ResponseWriter, r *http.Reques
 }
 
 func (controller *PostController) Create(w http.ResponseWriter, r *http.Request) {
-	var post model.Post
-	err := json.NewDecoder(r.Body).Decode(&post)
+	var postRequest *model.Post
+	err := json.NewDecoder(r.Body).Decode(&postRequest)
 	if err != nil {
 		response.ReturnErrorBadRequest(w, err, nil)
 		return
@@ -117,7 +107,7 @@ func (controller *PostController) Create(w http.ResponseWriter, r *http.Request)
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
 
-	err = controller.DB.WithContext(ctx).Create(&post).Error
+	post, err := controller.PostService.Create(ctx, postRequest)
 	if err != nil {
 		response.ReturnErrorInternalServerError(w, err, nil)
 		return
@@ -131,18 +121,17 @@ func (controller *PostController) Delete(w http.ResponseWriter, r *http.Request)
 	defer cancel()
 
 	id := chi.URLParam(r, "id")
-	var post model.Post
-	err := controller.DB.WithContext(ctx).First(&post, id).Error
+	idPost, err := strconv.ParseUint(id, 10, 64)
 	if err != nil {
-		response.ReturnErrorNotFound(w, err, nil)
+		response.ReturnErrorBadRequest(w, err, nil)
 		return
 	}
 
-	err = controller.DB.WithContext(ctx).Delete(&post).Error
+	err = controller.PostService.Delete(ctx, idPost)
 	if err != nil {
 		response.ReturnErrorInternalServerError(w, err, nil)
 		return
 	}
 
-	response.ReturnSuccessOK(w, "success", post)
+	response.ReturnSuccessOK(w, "success", nil)
 }

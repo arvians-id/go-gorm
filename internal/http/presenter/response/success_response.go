@@ -2,6 +2,7 @@ package response
 
 import (
 	"encoding/json"
+	"github.com/arvians-id/go-gorm/internal/http/presenter/request"
 	"net/http"
 )
 
@@ -17,7 +18,7 @@ func ReturnSuccessOK(w http.ResponseWriter, status string, data interface{}) {
 	w.Write(marshal)
 }
 
-func ReturnSuccessPagesOK(w http.ResponseWriter, status string, data interface{}, pages interface{}) {
+func ReturnSuccessPagesOK(w http.ResponseWriter, status string, data interface{}, pages request.PaginationData) {
 	var response WebResponsePages
 	response.Code = http.StatusOK
 	response.Status = status
